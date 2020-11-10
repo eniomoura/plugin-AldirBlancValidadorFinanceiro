@@ -1,0 +1,2 @@
+# plugin-validador-financeiro-go
+
