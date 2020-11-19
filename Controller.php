@@ -188,6 +188,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
              */
             foreach ($this->config['exportador_requer_validacao'] as $validador_slug) {
                 if(!$eligible) {
+                    echo json_encode($registration).' <<<<< NAO ELEGIVEL 1\n';
                     continue;
                 }
                 $validated = false;
@@ -202,7 +203,9 @@ class Controller extends \MapasCulturais\Controllers\Registration
             }
 
             if($eligible) {
-                $registrations[] = $registration;
+                $registrations[] = $registration.' <<<< NAO ELEGIVEL 2\n';
+            }else{
+                echo json_encode($registration);
             }
         }
 
