@@ -152,7 +152,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
             // verifica se este validador já validou esta inscrição
             foreach ($evaluations as $evaluation) {
                 if($validator_user->equals($evaluation->user)) {
-                    echo json_encode($registration["name"]).' <<<<< JA VALIDADO PELO AVALIADOR FINANCEIRO\n';
+                    echo json_encode($registration->number).' <<<<< JA VALIDADO PELO AVALIADOR FINANCEIRO\n';
                     $eligible = false;
                 }
             }
@@ -179,7 +179,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
                 }
 
                 if(!$homologado) {
-                    echo json_encode($registration["name"]).' <<<<< NAO HOMOLOGADO\n';
+                    echo json_encode($registration->number).' <<<<< NAO HOMOLOGADO\n';
                     $eligible = false;
                 }
             }
