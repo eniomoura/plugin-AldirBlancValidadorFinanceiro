@@ -31,6 +31,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
 
     protected $columns = [
         'NUMERO',
+        'MONOPARENTAL',
         'VALIDACAO',
         'OBSERVACOES',
         'DATA 1',
@@ -224,6 +225,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
         foreach ($registrations as $i => $registration) {
             $csv_data[$i] = [
                 'NUMERO' => $registration->number,
+                'MONOPARENTAL' => $registration->field_16,
                 'VALIDACAO' => null,
                 'OBSERVACOES' => null,
                 'DATA 1' => null,
