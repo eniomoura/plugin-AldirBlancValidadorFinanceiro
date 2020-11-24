@@ -42,7 +42,8 @@ class Controller extends \MapasCulturais\Controllers\Registration
         'DATA 4',
         'VALOR 4',
         'DATA 5',
-        'VALOR 5'
+        'VALOR 5',
+        'MONOPARENTAL',
     ];
 
     /**
@@ -236,6 +237,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
                 'VALOR 4' => null,
                 'DATA 5' => null,
                 'VALOR 5' => null,
+                'MONOPARENTAL' => $registration->field_16,
             ];
         }
 
