@@ -3,17 +3,18 @@
 namespace AldirBlancValidadorFinanceiro;
 
 use DateTime;
-use Doctrine\ORM\ORMException;
 use Exception;
-use InvalidArgumentException;
-use League\Csv\Writer;
+use Normalizer;
 use League\Csv\Reader;
-use League\Csv\Statement;
+use League\Csv\Writer;
 use MapasCulturais\App;
+use League\Csv\Statement;
+use InvalidArgumentException;
+use Doctrine\ORM\ORMException;
+use RegistrationPayments\Payment;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\Registration;
 use MapasCulturais\Entities\RegistrationEvaluation;
-use RegistrationPayments\Payment;
 
 /**
  * Registration Controller
@@ -31,6 +32,8 @@ class Controller extends \MapasCulturais\Controllers\Registration
 
     protected $columns = [
         'NUMERO',
+        'MONO_PARENTAL_INSCRICAO',
+        'MONO_PARENTAL_DATAPREV',
         'VALIDACAO',
         'OBSERVACOES',
         'DATA 1',
@@ -43,7 +46,21 @@ class Controller extends \MapasCulturais\Controllers\Registration
         'VALOR 4',
         'DATA 5',
         'VALOR 5',
-        'MONOPARENTAL',
+        'DATA 6',
+        'VALOR 6',
+        'DATA 7',
+        'VALOR 7',
+        'DATA 8',
+        'VALOR 8',
+        'DATA 9',
+        'VALOR 9',
+        'DATA 10',
+        'VALOR 10',
+        'DATA 11',
+        'VALOR 11',
+        'DATA 12',
+        'VALOR 12',
+        'MONOPARENTAL'
     ];
 
     /**
@@ -85,16 +102,11 @@ class Controller extends \MapasCulturais\Controllers\Registration
     protected function getRegistrations(Opportunity $opportunity){
         $app = App::i();
 
-        // status das inscrições
-        $status = intval($this->data['status'] ?? 1);
-
-        $dql_params = [
-            'opportunity_Id' => $opportunity->id,
-            'status' => $status,
-        ];
+        $dql_params = [ 'opportunity_Id' => $opportunity->id ];
 
         $from = $this->data['from'] ?? '';
         $to = $this->data['to'] ?? '';
+        $only_unprocessed = $this->data['only_unprocessed'] ?? false;
 
         if ($from && !DateTime::createFromFormat('Y-m-d', $from)) {
             throw new \Exception("O formato do parâmetro `from` é inválido.");
@@ -126,7 +138,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
             WHERE
                 $dql_to
                 $dql_from
-                e.status = :status AND
+                e.status IN (1,10) AND
                 e.opportunity = :opportunity_Id";
 
         $query = $app->em->createQuery($dql);
@@ -150,10 +162,12 @@ class Controller extends \MapasCulturais\Controllers\Registration
             
             $eligible = true;
 
-            // verifica se este validador já validou esta inscrição
-            foreach ($evaluations as $evaluation) {
-                if($validator_user->equals($evaluation->user)) {
-                    $eligible = false;
+            if ($only_unprocessed) {
+                // verifica se este validador já validou esta inscrição
+                foreach ($evaluations as $evaluation) {
+                    if($validator_user->equals($evaluation->user)) {
+                        $eligible = false;
+                    }
                 }
             }
             
@@ -220,11 +234,38 @@ class Controller extends \MapasCulturais\Controllers\Registration
          */
         $headers = $this->columns;
         
+        $config = $this->config['coluna_mulher_mono_parental'];
+
         $csv_data = [];
 
-        foreach ($registrations as $i => $registration) {
+
+        foreach ($registrations as $i => $registration) {   
+                  
+            $monoParental = null;
+            $monoParentalInscricao = null;
+            $monoParentalDataprev = null;
+            $opportunity = $this->data['opportunity'];
+            if($config['status'] && $registration->getMetadata('inciso') == 1){
+                $monoParentalDataprev = json_decode($registration->getMetadata('dataprev_raw'))->IN_MULH_PROV_MONOPARENT;
+                
+                if($config['tipo_busca'] === "id"){
+                    $monoParentalInscricao = $registration->getMetadata('field_'.$config['referencia']) ?? null;                    
+                   
+                }else if($config['tipo_busca'] === "name"){
+                    foreach($registration->opportunity->registrationFieldConfigurations as $field){
+                        if($config['referencia'] === $field->title){                    
+                            $monoParentalInscricao = $registration->getMetadata('field_'.$field->id) ?? null;
+                            break;
+    
+                        }
+                    }              
+                }
+            }
+                        
             $csv_data[$i] = [
                 'NUMERO' => $registration->number,
+                'MONO_PARENTAL' => strtoupper($this->normalizeString($monoParentalInscricao)),
+                'MONO_PARENTAL_DATAPREV' => strtoupper($this->normalizeString($monoParentalDataprev)),
                 'VALIDACAO' => null,
                 'OBSERVACOES' => null,
                 'DATA 1' => null,
@@ -237,7 +278,21 @@ class Controller extends \MapasCulturais\Controllers\Registration
                 'VALOR 4' => null,
                 'DATA 5' => null,
                 'VALOR 5' => null,
-                'MONOPARENTAL' => $registration->field_16,
+                'DATA 6' => null,
+                'VALOR 6' => null,
+                'DATA 7' => null,
+                'VALOR 7' => null,
+                'DATA 8' => null,
+                'VALOR 8' => null,
+                'DATA 9' => null,
+                'VALOR 9' => null,
+                'DATA 10' => null,
+                'VALOR 10' => null,
+                'DATA 11' => null,
+                'VALOR 11' => null,
+                'DATA 12' => null,
+                'VALOR 12' => null,
+                'MONOPARENTAL' => $registration->field_16
             ];
         }
 
@@ -371,7 +426,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
         $csv = Reader::createFromStream($stream);
 
         //Define o limitador do arqivo (, ou ;)
-        // $csv->setDelimiter(";");
+        $csv->setDelimiter(",");
 
         //Seta em que linha deve se iniciar a leitura
         $header_temp = $csv->setHeaderOffset(0);
@@ -448,7 +503,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
 
             if ($result == '10' && empty($obs)) {
                 $obs = "Inscrição Aprovada\n------------------";
-                for ($i = 1; $i <= 5; $i++) {
+                for ($i = 1; $i <= 12; $i++) {
                     $data = $line["DATA {$i}"] ?? null;
                     $valor = $line["VALOR {$i}"] ?? null;
                     if ($data && $valor) {
@@ -461,17 +516,24 @@ class Controller extends \MapasCulturais\Controllers\Registration
             
             $registration = $app->repo('Registration')->findOneBy(['number' => $num]);
             $registration->__skipQueuingPCacheRecreation = true;
+
+            $raw_data = $registration->{$slug . '_raw'};
+            $filesnames = $registration->{$slug . '_filename'};
             
             /* @TODO: implementar atualização de status?? */
-            if ($registration->{$slug . '_raw'} != (object) []) {
+            if (in_array($filename, $filesnames)) {
                 $app->log->info("$name #{$count} {$registration} $eval - JÁ PROCESSADA");
                 continue;
             }
             
             $app->log->info("$name #{$count} {$registration} $eval");
-            
-            $registration->{$slug . '_raw'} = $line;
-            $registration->{$slug . '_filename'} = $filename;
+
+            $raw_data[] = $line;
+            $filesnames[] = $filename;
+
+            $registration->{$slug . '_raw'} = $raw_data;
+            $registration->{$slug . '_filename'} = $filesnames;
+
             $registration->save(true);
     
             $user = $this->plugin->user;
@@ -494,7 +556,7 @@ class Controller extends \MapasCulturais\Controllers\Registration
                     $payment = new Payment;
                     $payment->createdByUser = $this->plugin->getUser();
                     $payment->paymentDate = $data;
-                    $payment->amount = $valor;
+                    $payment->amount = str_replace(',','.',$valor);
                     $payment->registration = $registration;
                     $payment->metadata->csv_line = $line;
                     $payment->metadata->csv_filename = $filename;
@@ -526,5 +588,17 @@ class Controller extends \MapasCulturais\Controllers\Registration
 
     public function import_inciso2() {
         
+    }
+
+     /**
+     * Normaliza uma string
+     *
+     * @param string $valor
+     * @return string
+     */
+    private function normalizeString($valor): string
+    {
+        $valor = Normalizer::normalize($valor, Normalizer::FORM_D);
+        return preg_replace('/[^A-Za-z0-9 ]/i', '', $valor);
     }
 }
